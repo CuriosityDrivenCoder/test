@@ -1,0 +1,753 @@
+
+Tabii, kodunuzu dikkatlice inceledim ve analiz ettim. Şimdi kodunuzdaki her satırın ne iş yaptığını detaylı bir şekilde açıklayacağım:
+
+Kod Analizi ve Açıklaması
+
+Bu Python kodu, banka şubelerinin performansını değerlendirmek ve sıralamak için tasarlanmış bir modelleme sürecini uyguluyor. Kod, veritabanından veri çekme, veriyi ön işleme, kümeleme (clustering) uygulama, kümeleri manipüle etme ve son olarak bir model skoru hesaplama gibi adımları içeriyor.
+
+Kod Satırlarının Detaylı Açıklaması
+
+Python
+
+## En son sadelestirilien ve calisan kod
+Bu satır, kodun en son sadeleştirilmiş ve çalışan versiyonu olduğunu belirtiyor. Sadece bir yorum satırıdır.
+Python
+
+import pandas as pd
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+import cx_Oracle
+import pandas as pd: Pandas kütüphanesini pd kısaltmasıyla içe aktarır. Pandas, veri manipülasyonu ve analizi için kullanılan güçlü bir kütüphanedir.
+import numpy as np: NumPy kütüphanesini np kısaltmasıyla içe aktarır. NumPy, bilimsel hesaplamalar için kullanılan temel bir kütüphanedir. Özellikle diziler ve matrisler üzerinde işlem yapmak için kullanılır.
+from sklearn.cluster import KMeans: scikit-learn kütüphanesinden KMeans sınıfını içe aktarır. KMeans, kümeleme algoritmasıdır.
+from sklearn.preprocessing import StandardScaler, MinMaxScaler: scikit-learn kütüphanesinden StandardScaler ve MinMaxScaler sınıflarını içe aktarır. Bu sınıflar, veri ölçeklendirme için kullanılır.
+import cx_Oracle: cx_Oracle kütüphanesini içe aktarır. Bu kütüphane, Oracle veritabanlarına bağlanmak için kullanılır.
+Python
+
+def get_data_from_db():
+    """Database connection and data retrieval"""
+    tns = "url"
+    user = "usr" #KULLANICI ADI
+    passw = "pass" #ŞİFRE 
+    con = cx_Oracle.connect(user, passw, tns)
+    cur = con.cursor()
+    
+    query = """
+    SELECT 
+    BRANCH_ID as PARTY_ID, DATA_DATE as DATA_DATE, WORKING_CAPACITY_AMOUNT_TL as WORKING_CAPACITY_AMOUNT_TL, NET_PROFIT_AMOUNT_TL as NET_PROFIT_AMOUNT_TL, COST_INCOME_RATIO as COST_INCOME_RATIO, NOF_ACTIVE_CUSTOMER as NOF_ACTIVE_CUSTOMER, NPL_CREDIT_CASH_LOAN_RATIO as NPL_CREDIT_CASH_LOAN_RATIO, OTHER_WORK_CAP_AMOUNT_TL as OTHER_WORK_CAP_AMOUNT_TL, NOF_FINANCIAL_TRANSACTION_L12M as NOF_FINANCIAL_TRANSACTION_L12M, CAPACITY_USAGE_RATIO as CAPACITY_USAGE_RATIO, DIGITAL_CUSTOMER_RATIO as DIGITAL_CUSTOMER_RATIO, NEW_ACTIVE_CUSTOMER_RATIO_L12M as NEW_ACTIVE_CUSTOMER_RATIO_L12M, ACTIVE_PRODUCT_CUSTOMER_RATIO as ACTIVE_PRODUCT_CUSTOMER_RATIO, CREDIT_MARKET_SHARE_EXCL_BRCH as CREDIT_MARKET_SHARE_EXCL_BRCH, DEPOSIT_MARKET_SHARE_EXCL_BRCH as DEPOSIT_MARKET_SHARE_EXCL_BRCH, DISTRICT_ADULT_BRANCH_RATIO as DISTRICT_ADULT_BRANCH_RATIO, NOF_COMPETITOR_BRANCH_NEARBY as NOF_COMPETITOR_BRANCH_NEARBY, WORK_CAP_AMOUNT_TL_RATIO_L12M as WORK_CAP_AMOUNT_TL_RATIO_L12M, ACTIVE_CUSTOMER_RATIO_L12M as ACTIVE_CUSTOMER_RATIO_L12M, BUDGET_WORK_CAP_AMT_TL_RATIO as BUDGET_WORK_CAP_AMT_TL_RATIO, CUSTOMER_PRODUCTIVITY_RATIO as CUSTOMER_PRODUCTIVITY_RATIO, NOF_BRANCH_IN_MICRO_MARKET as NOF_BRANCH_IN_MICRO_MARKET, MICRO_MARKET_POTENTIAL_RATIO as MICRO_MARKET_POTENTIAL_RATIO, COMPETITOR_STATE_ID as COMPETITOR_STATE_ID
+    FROM SCHEMA.TABLENAME
+    """
+    
+    cur.execute(query)
+    data_m = cur.fetchall()
+    
+    df = pd.DataFrame(data_m)
+    df.columns = [i[0] for i in cur.description]
+    
+    return df
+def get_data_from_db():: Bu satır, get_data_from_db adında bir fonksiyon tanımlar. Bu fonksiyonun görevi, veritabanından veri çekmektir.
+"""Database connection and data retrieval""": Bu, fonksiyonun ne yaptığını açıklayan bir docstring'dir (dokümantasyon dizisi).
+tns = "url": Oracle veritabanına bağlanmak için TNS (Transparent Network Substrate) string'ini tanımlar. Burada "url" yerine gerçek TNS adresi olmalıdır.
+user = "usr" #KULLANICI ADI: Veritabanı kullanıcı adını tanımlar. "usr" yerine gerçek kullanıcı adı olmalıdır.
+passw = "pass" #ŞİFRE: Veritabanı şifresini tanımlar. "pass" yerine gerçek şifre olmalıdır.
+con = cx_Oracle.connect(user, passw, tns): cx_Oracle kütüphanesini kullanarak veritabanına bağlantı kurar.
+cur = con.cursor(): Veritabanı üzerinde işlem yapmak için bir cursor (imleç) oluşturur.
+query = """ ... FROM SCHEMA.TABLENAME """: Veritabanından veri çekmek için kullanılacak SQL sorgusunu tanımlar. Sorgu, belirli sütunları SCHEMA.TABLENAME tablosundan seçer. SCHEMA.TABLENAME yerine gerçek şema ve tablo adı kullanılmalıdır. Sütunlara takma adlar (alias) atanır (örneğin, BRANCH_ID as PARTY_ID).
+cur.execute(query): Tanımlanan SQL sorgusunu veritabanında çalıştırır.
+data_m = cur.fetchall(): Sorgu sonucunda dönen tüm veriyi alır ve data_m değişkenine atar.
+df = pd.DataFrame(data_m): Alınan veriyi bir Pandas DataFrame'ine dönüştürür. DataFrame, tablo şeklinde veri yapısıdır.
+df.columns = [i[0] for i in cur.description]: DataFrame'in sütun isimlerini, cursor'ın description özelliğinden alır. Bu özellik, sorgu sonucundaki sütunların meta bilgilerini içerir.
+return df: Oluşturulan DataFrame'i fonksiyonun çıktısı olarak döndürür.
+Python
+
+def prepare_data(df):
+    """Data preparation and scaling"""
+    df = df.drop(columns=['DATA_DATE'])
+    branch_data = df.rename(columns={'PARTY_ID': 'KOD'}).copy()
+    var_3 = list(branch_data.columns)[1:]
+    branch_data.fillna(0, inplace=True)
+    
+    scaler = StandardScaler()
+    scale_val = scaler.fit_transform(branch_data[var_3])
+    
+    return branch_data, var_3, scale_val
+def prepare_data(df):: Bu satır, prepare_data adında bir fonksiyon tanımlar. Bu fonksiyonun görevi, veriyi ön işleme ve ölçeklendirme yapmaktır.
+"""Data preparation and scaling""": Bu, fonksiyonun ne yaptığını açıklayan bir docstring'dir.
+df = df.drop(columns=['DATA_DATE']): DataFrame'den 'DATA_DATE' sütununu kaldırır.
+branch_data = df.rename(columns={'PARTY_ID': 'KOD'}).copy(): DataFrame'in bir kopyasını oluşturur ve 'PARTY_ID' sütununun adını 'KOD' olarak değiştirir. .copy() kullanmak, orijinal DataFrame'in değiştirilmesini önler.
+var_3 = list(branch_data.columns)[1:]: DataFrame'in sütun isimlerinin bir listesini oluşturur ve bu listeyi var_3 değişkenine atar. Listenin ilk elemanı (index 0) hariç tüm sütun isimlerini alır.
+branch_data.fillna(0, inplace=True): DataFrame'deki tüm eksik (NaN) değerleri 0 ile doldurur. inplace=True parametresi, değişikliğin doğrudan DataFrame üzerinde yapılmasını sağlar.
+scaler = StandardScaler(): Bir StandardScaler nesnesi oluşturur.
+scale_val = scaler.fit_transform(branch_data[var_3]): StandardScaler'ı kullanarak var_3 listesindeki sütunları ölçeklendirir. Ölçeklendirme işlemi, her sütunun ortalamasını 0 ve standart sapmasını 1 yapacak şekilde veriyi dönüştürür. fit_transform metodu, hem ölçeklendirme parametrelerini hesaplar (fit) hem de ölçeklendirme işlemini uygular (transform).
+return branch_data, var_3, scale_val: Ön işlenmiş DataFrame (branch_data), sütun isimleri listesi (var_3) ve ölçeklendirilmiş değerler (scale_val)'i fonksiyonun çıktısı olarak döndürür.
+Python
+
+def find_optimal_clusters(scale_val, branch_data, info_count=1):
+    """Find optimal number of clusters for each variable"""
+    kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 1000, "random_state": 42}
+    num_of_cluster = {}
+    slice_count = 20
+    
+    for i in range(0, scale_val.shape[1]):
+        sse =
+        for k in range(1, slice_count):
+            kmeans = KMeans(n_clusters=k, **kmeans_kwargs)
+            kmeans.fit(scale_val[:, i].reshape(len(scale_val), 1))
+            sse.append(kmeans.inertia_)
+            
+        difference = abs(np.diff(np.array(sse)))
+        num_of_cluster[branch_data.columns.values[i + info_count]] = np.sum(difference > difference.sum()*0.01)
+    
+    num_of_cluster = {k: min(max(v, 5), 7) for k, v in num_of_cluster.items()}
+    num_of_cluster["COMPETITOR_STATE_ID"] = 5  # Override for this specific column
+    
+    return num_of_cluster
+def find_optimal_clusters(scale_val, branch_data, info_count=1):: Bu satır, find_optimal_clusters adında bir fonksiyon tanımlar. Bu fonksiyonun görevi, her değişken için optimal küme sayısını bulmaktır.
+"""Find optimal number of clusters for each variable""": Bu, fonksiyonun ne yaptığını açıklayan bir docstring'dir.
+kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 1000, "random_state": 42}: KMeans kümeleme algoritması için kullanılacak parametreleri bir sözlükte tanımlar.
+init="random": Küme merkezlerinin başlangıç noktalarının rastgele seçilmesini belirtir.
+n_init=10: KMeans algoritmasının farklı başlangıç noktalarıyla 10 kez çalıştırılmasını belirtir. En iyi sonuç veren çalışma kullanılır.
+max_iter=1000: Her bir KMeans çalışması için maksimum iterasyon sayısını 1000 olarak ayarlar.
+random_state=42: Rastgele sayı üreticisi için bir başlangıç değeri (seed) belirler. Bu, kodun her çalıştırıldığında aynı sonuçları vermesini sağlar.
+num_of_cluster = {}: Her değişken için optimal küme sayısını saklamak için boş bir sözlük oluşturur.
+slice_count = 20: Küme sayısı aralığını belirlemek için bir değişken tanımlar. Bu durumda, her değişken için 1'den 19'a kadar olan küme sayıları değerlendirilecektir.
+for i in range(0, scale_val.shape[1]):: Ölçeklendirilmiş verideki her bir sütun için bir döngü başlatır. scale_val.shape[1], sütun sayısını verir.
+sse =: Her küme sayısı için Sum of Squared Errors (SSE) değerini saklamak için boş bir liste oluşturur. SSE, kümeleme algoritmasının performansını değerlendirmek için kullanılan bir metriktir.
+for k in range(1, slice_count):: Her bir sütun için 1'den slice_count-1'e kadar olan küme sayıları için bir iç döngü başlatır.
+kmeans = KMeans(n_clusters=k, **kmeans_kwargs): k sayıda küme oluşturmak için bir KMeans modeli oluşturur.
+kmeans.fit(scale_val[:, i].reshape(len(scale_val), 1)): KMeans modelini, ölçeklendirilmiş verinin i. sütununa uygular. scale_val[:, i] sütunu seçer, .reshape(len(scale_val), 1) ile sütunu bir 2B diziye dönüştürür.
+sse.append(kmeans.inertia_): KMeans modelinin SSE değerini (kmeans.inertia_) sse listesine ekler.
+difference = abs(np.diff(np.array(sse))): sse listesindeki ardışık değerler arasındaki farkın mutlak değerini hesaplar. Bu, "dirsek yöntemi" (elbow method) için kullanılır.
+num_of_cluster[branch_data.columns.values[i + info_count]] = np.sum(difference > difference.sum()*0.01): "Dirsek yöntemi" ile optimal küme sayısını belirler. Fark dizisindeki (difference) değerlerin toplamının %1'inden büyük olan farkların sayısını hesaplar. Bu sayı, ilgili sütun için optimal küme sayısı olarak kabul edilir. branch_data.columns.values[i + info_count] ile sütunun ismini alır ve num_of_cluster sözlüğüne anahtar olarak ekler. info_count parametresi, 'KOD' gibi bilgi sütunlarını atlamak için kullanılır.
+num_of_cluster = {k: min(max(v, 5), 7) for k, v in num_of_cluster.items()}: num_of_cluster sözlüğündeki tüm değerleri (küme sayılarını) 5 ile 7 arasına sınırlar. Yani, küme sayısı 5'ten küçükse 5'e, 7'den büyükse 7'ye eşitlenir.
+num_of_cluster["COMPETITOR_STATE_ID"] = 5 # Override for this specific column: "COMPETITOR_STATE_ID" sütunu için küme sayısını 5 olarak sabitler.
+return num_of_cluster: Optimal küme sayılarını içeren sözlüğü döndürür.
+Python
+
+def cluster_and_score(branch_data, var_list, scale_val, num_of_cluster, ratios, info_count=1):
+    """Apply K-means clustering and calculate scores"""
+    kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 1000, "random_state": 42}
+    
+    for i, area in enumerate(var_list):
+        kmeans = KMeans(n_clusters=num_of_cluster.get(area), **kmeans_kwargs)
+        kmeans.fit(scale_val[:, i].reshape(-1, 1))
+        
+        # Sort data and calculate scores
+        df = pd.DataFrame({
+            'KOD': branch_data['KOD'],
+            area: branch_data[area],
+            'DILIM': kmeans.labels_,
+            'OLCK': scale_val[:, i]
+        }).sort_values(by=area, ascending=ratios[i]).reset_index(drop=True)
+        
+        # Calculate scores
+        skor = 0
+        df[area + '_SKOR'] = 0
+        for j in range(len(df) - 1):
+            df.at[j, area + '_SKOR'] = skor
+            if df.at[j, 'DILIM'] != df.at[j + 1, 'DILIM']:
+                skor += 1
+        df.at[len(df) - 1, area + '_SKOR'] = skor
+        
+        # Merge scores back to branch_data
+        branch_data = pd.merge(branch_data, df[['KOD', area + '_SKOR']], on='KOD', how='inner')
+    
+    return branch_data
+`def cluster_and_score(
+
+Kaynaklar ve ilgili içerik
+v7
+
+PY
+
+
+
+
+devam et lutfen
+
+
+Elbette, açıklamaya devam ediyorum:
+
+Python
+
+def cluster_and_score(branch_data, var_list, scale_val, num_of_cluster, ratios, info_count=1):
+    """Apply K-means clustering and calculate scores"""
+    kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 1000, "random_state": 42}
+    
+    for i, area in enumerate(var_list):
+        kmeans = KMeans(n_clusters=num_of_cluster.get(area), **kmeans_kwargs)
+        kmeans.fit(scale_val[:, i].reshape(-1, 1))
+        
+        # Sort data and calculate scores
+        df = pd.DataFrame({
+            'KOD': branch_data['KOD'],
+            area: branch_data[area],
+            'DILIM': kmeans.labels_,
+            'OLCK': scale_val[:, i]
+        }).sort_values(by=area, ascending=ratios[i]).reset_index(drop=True)
+        
+        # Calculate scores
+        skor = 0
+        df[area + '_SKOR'] = 0
+        for j in range(len(df) - 1):
+            df.at[j, area + '_SKOR'] = skor
+            if df.at[j, 'DILIM'] != df.at[j + 1, 'DILIM']:
+                skor += 1
+        df.at[len(df) - 1, area + '_SKOR'] = skor
+        
+        # Merge scores back to branch_data
+        branch_data = pd.merge(branch_data, df[['KOD', area + '_SKOR']], on='KOD', how='inner')
+    
+    return branch_data
+def cluster_and_score(branch_data, var_list, scale_val, num_of_cluster, ratios, info_count=1):: Bu satır, cluster_and_score adında bir fonksiyon tanımlar. Bu fonksiyonun görevi, K-means kümelemesi uygulamak ve skorları hesaplamaktır.
+"""Apply K-means clustering and calculate scores""": Bu, fonksiyonun ne yaptığını açıklayan bir docstring'dir.
+kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 1000, "random_state": 42}: KMeans kümeleme algoritması için kullanılacak parametreleri bir sözlükte tanımlar. Bu parametreler find_optimal_clusters fonksiyonunda açıklananlarla aynıdır.
+for i, area in enumerate(var_list):: var_list'teki her bir değişken için bir döngü başlatır. enumerate fonksiyonu, hem değişkenin indeksini (i) hem de değerini (area) verir.
+kmeans = KMeans(n_clusters=num_of_cluster.get(area), **kmeans_kwargs): İlgili değişken için num_of_cluster sözlüğünden alınan optimal küme sayısına göre bir KMeans modeli oluşturur.
+kmeans.fit(scale_val[:, i].reshape(-1, 1)): KMeans modelini, ölçeklendirilmiş verinin i. sütununa uygular. scale_val[:, i] sütunu seçer, .reshape(-1, 1) ile sütunu 2B bir diziye dönüştürür. -1 değeri, satır sayısının otomatik olarak hesaplanmasını sağlar.
+df = pd.DataFrame({ ... }): Kümeleme sonuçlarını ve ilgili verileri içeren bir Pandas DataFrame'i oluşturur.
+'KOD': branch_data['KOD']: Şube kodlarını ('KOD') DataFrame'e ekler.
+area: branch_data[area]: İlgili değişkenin değerlerini DataFrame'e ekler.
+'DILIM': kmeans.labels_: KMeans algoritması tarafından atanan küme etiketlerini ('DILIM') DataFrame'e ekler. kmeans.labels_, her bir veri noktası için atanan küme etiketlerini içeren bir NumPy dizisidir.
+'OLCK': scale_val[:, i]: Ölçeklendirilmiş verinin ilgili sütununu ('OLCK') DataFrame'e ekler.
+.sort_values(by=area, ascending=ratios[i]).reset_index(drop=True): DataFrame'i ilgili değişkenin değerlerine göre sıralar. ratios[i] değeri, sıralamanın artan mı yoksa azalan mı olacağını belirler. True ise artan, False ise azalan şekilde sıralama yapılır. reset_index(drop=True) ile sıralama sonrası oluşan eski indeks değerlerini sıfırlar.
+skor = 0: Şube skorunu hesaplamak için bir değişken tanımlar ve başlangıç değerini 0 olarak ayarlar.
+df[area + '_SKOR'] = 0: İlgili değişken için skor sütununu oluşturur ve başlangıç değerlerini 0 olarak atar.
+for j in range(len(df) - 1):: DataFrame'in satırları üzerinde bir döngü başlatır. Son satıra kadar olan satırları işler.
+df.at[j, area + '_SKOR'] = skor: İlgili satırın skor değerini, mevcut skor değerine eşitler. df.at[j, column_name] yapısı, DataFrame'deki belirli bir hücreye erişmek ve değerini değiştirmek için kullanılır.
+if df.at[j, 'DILIM'] != df.at[j + 1, 'DILIM']:: Mevcut satırın küme etiketi, bir sonraki satırın küme etiketinden farklıysa:
+skor += 1: skor değerini 1 artırır. Bu, farklı kümeler arasında geçiş olduğunda skoru artırarak, sıralamadaki değişiklikleri yakalamayı amaçlar.
+df.at[len(df) - 1, area + '_SKOR'] = skor: Son satırın skor değerini, mevcut skor değerine eşitler.
+branch_data = pd.merge(branch_data, df[['KOD', area + '_SKOR']], on='KOD', how='inner'): Hesaplanan skorları orijinal branch_data DataFrame'ine 'KOD' sütunu üzerinden birleştirir (merge). how='inner' parametresi, yalnızca her iki DataFrame'de de ortak olan 'KOD' değerlerine sahip satırların birleştirilmesini sağlar.
+return branch_data: Güncellenmiş branch_data DataFrame'ini döndürür.
+Python
+
+def manipulate_clusters(branch_data, var_3, num_of_cluster, ratios, alt_limit=0.1, ust_limit=0.25):
+    """Manipulate clusters based on limits"""
+    recluster = pd.DataFrame({
+        "VARIABLE": var_3,
+        "RATIOS": ratios,
+        "IS_MANUPULATED": np.zeros(len(ratios)),
+        "CLUSTER_NO": np.zeros(len(ratios)),
+        "SEMI_CLUSTER": np.zeros(len(ratios))
+    })
+    
+    for x in var_3:
+        mem_rat=0
+        for i in range(num_of_cluster[x]):
+            if i==0:
+                if branch_data[branch_data[x+'_SKOR']==i].KOD.count()/branch_data.KOD.count()>=alt_limit:
+                    break
+                elif branch_data[branch_data[x+'_SKOR']==i].KOD.count()/branch_data.KOD.count()<alt_limit:
+                    mem_rat=mem_rat+branch_data[branch_data[x+'_SKOR']==i].KOD.count()/branch_data.KOD.count()
+    
+            else:
+                if mem_rat<alt_limit:
+                    mem_rat=mem_rat+branch_data[branch_data[x+'_SKOR']==i].KOD.count()/branch_data.KOD.count()
+                    if mem_rat>=ust_limit:
+                        recluster.loc[recluster.VARIABLE==x,"IS_MANUPULATED"]=1
+                        if i==num_of_cluster[x]-1:
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i-1
+                        elif i<=num_of_cluster[x]-2 and x=='OTHER_WORK_CAP_AMOUNT_TL':
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i+1
+                        else:
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i
+    
+                        if x=='OTHER_WORK_CAP_AMOUNT_TL':
+                            recluster.loc[recluster.VARIABLE==x,"SEMI_CLUSTER"]=0
+                        else:
+                            recluster.loc[recluster.VARIABLE==x,"SEMI_CLUSTER"]=1
+                        break
+                    elif mem_rat>=alt_limit:
+                        recluster.loc[recluster.VARIABLE==x,"IS_MANUPULATED"]=1
+                        if i==num_of_cluster[x]-1:
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i-1
+                        elif i<=num_of_cluster[x]-2 and x=='OTHER_WORK_CAP_AMOUNT_TL':
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i+1
+                        else:
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i
+                        break
+    # Fix the typo: NOF_RANCH_IN_MICRO_MARKET -> NOF_BRANCH_IN_MICRO_MARKET
+    recluster.loc[recluster.VARIABLE=="NOF_BRANCH_IN_MICRO_MARKET","IS_MANUPULATED"]=0 
+    recluster.loc[recluster.VARIABLE=="COMPETITOR_STATE_ID","IS_MANUPULATED"]=0      
+    
+    return recluster
+def manipulate_clusters(branch_data, var_3, num_of_cluster, ratios, alt_limit=0.1, ust_limit=0.25):: Bu satır, manipulate_clusters adında bir fonksiyon tanımlar. Bu fonksiyonun görevi, kümeleri belirli limitlere göre manipüle etmektir.
+"""Manipulate clusters based on limits""": Bu, fonksiyonun ne yaptığını açıklayan bir docstring'dir.
+recluster = pd.DataFrame({ ... }): Kümelerin manipülasyon durumlarını saklamak için bir Pandas DataFrame'i oluşturur.
+"VARIABLE": var_3: Değişken isimlerini ('VARIABLE') sütununa ekler.
+"RATIOS": ratios: Değişkenlerin sıralama oranlarını ('RATIOS') sütununa ekler.
+"IS_MANUPULATED": np.zeros(len(ratios)): Kümelerin manipüle edilip edilmediğini gösteren bir sütun oluşturur ve başlangıç değerlerini 0 olarak ayarlar.
+"CLUSTER_NO": np.zeros(len(ratios)): Manipülasyon sonrası küme numarasını saklamak için bir sütun oluşturur ve başlangıç değerlerini 0 olarak ayarlar.
+"SEMI_CLUSTER": np.zeros(len(ratios)): Yarı kümeleme durumunu gösteren bir sütun oluşturur ve başlangıç değerlerini 0 olarak ayarlar.
+for x in var_3:: var_3'teki her bir değişken için bir döngü başlatır.
+mem_rat = 0: Bir değişkene ait kümelerin belirli bir orana ulaşıp ulaşmadığını kontrol etmek için bir değişken tanımlar ve başlangıç değerini 0 olarak ayarlar.
+for i in range(num_of_cluster[x]):: İlgili değişken için optimal küme sayısına kadar bir döngü başlatır.
+if i == 0:: Eğer küme numarası 0 ise:
+if branch_data[branch_data[x + '_SKOR'] == i].KOD.count() / branch_data.KOD.count() >= alt_limit:: Eğer 0 numaralı kümeye ait şubelerin oranı alt_limit'e eşit veya büyükse, döngüden çıkar. Bu kontrol, en küçük kümelerin çok büyük olmasını engellemeyi amaçlar.
+elif branch_data[branch_data[x + '_SKOR'] == i].KOD.count() / branch_data.KOD.count() < alt_limit:: Eğer 0 numaralı kümeye ait şubelerin oranı alt_limit'ten küçükse:
+mem_rat = mem_rat + branch_data[branch_data[x + '_SKOR'] == i].KOD.count() / branch_data.KOD.count(): 0 numaralı kümeye ait şubelerin oranını mem_rat'e ekler.
+else:: Eğer küme numarası 0 değilse:
+if mem_rat < alt_limit:: Eğer mem_rat değeri alt_limit'ten küçükse:
+mem_rat = mem_rat + branch_data[branch_data[x + '_SKOR'] == i].KOD.count() / branch_data.KOD.count(): İlgili kümeye ait şubelerin oranını mem_rat'e ekler.
+if mem_rat >= ust_limit:: Eğer mem_rat değeri ust_limit'e eşit veya büyükse:
+recluster.loc[recluster.VARIABLE == x, "IS_MANUPULATED"] = 1: İlgili değişkenin manipüle edildiğini belirtir.
+if i == num_of_cluster[x] - 1:: Eğer küme numarası, optimal küme sayısının bir eksiğine eşitse:
+recluster.loc[recluster.VARIABLE == x, "CLUSTER_NO"] = i - 1: Manipülasyon sonrası küme numarasını bir azaltır.
+elif i <= num_of_cluster[x] - 2 and x == 'OTHER_WORK_CAP_AMOUNT_TL':: Eğer küme numarası, optimal küme sayısının iki eksiğine eşit veya küçükse ve değişken 'OTHER_WORK_CAP_AMOUNT_TL' ise:
+recluster.loc[recluster.VARIABLE == x, "CLUSTER_NO"] = i + 1: Manipülasyon sonrası küme numarasını bir artırır.
+else:: Diğer durumlarda:
+recluster.loc[recluster.VARIABLE == x, "CLUSTER_NO"] = i: Manipülasyon sonrası küme numarasını olduğu gibi bırakır.
+if x == 'OTHER_WORK_CAP_AMOUNT_TL':: Eğer değişken 'OTHER_WORK_CAP_AMOUNT_TL' ise:
+recluster.loc[recluster.VARIABLE == x, "SEMI_CLUSTER"] = 0: Yarı kümeleme durumunu 0 olarak ayarlar.
+else:: Diğer durumlarda:
+recluster.loc[recluster.VARIABLE == x, "SEMI_CLUSTER"] = 1: Yarı kümeleme durumunu 1 olarak ayarlar.
+break: Döngüden çıkar.
+elif mem_rat >= alt_limit:: Eğer mem_rat değeri alt_limit'e eşit veya büyükse:
+recluster.loc[recluster.VARIABLE == x, "IS_MANUPULATED"] = 1: İlgili değişkenin manipüle edildiğini belirtir.
+if i == num_of_cluster[x] - 1:: Eğer küme numarası, optimal küme sayısının bir eksiğine eşitse:
+recluster.loc[recluster.VARIABLE == x, "CLUSTER_NO"] = i - 1: Manipülasyon sonrası küme numarasını bir azaltır.
+elif i <= num_of_cluster[x] - 2 and x == 'OTHER_WORK_CAP_AMOUNT_TL':: Eğer küme numarası, optimal küme sayısının iki eksiğine eşit veya küçükse ve değişken 'OTHER_WORK_CAP_AMOUNT_TL' ise:
+recluster.loc[recluster.VARIABLE == x, "CLUSTER_NO"] = i + 1: Manipülasyon sonrası küme numarasını bir artırır.
+else:: Diğer durumlarda:
+recluster.loc[recluster.VARIABLE == x, "CLUSTER_NO"] = i: Manipülasyon sonrası küme numarasını olduğu gibi bırakır.
+break: Döngüden çıkar.
+recluster.loc[recluster.VARIABLE == "NOF_BRANCH_IN_MICRO_MARKET", "IS_MANUPULATED"] = 0: "NOF_BRANCH_IN_MICRO_MARKET" değişkeninin manipülasyon durumunu 0 olarak ayarlar.
+recluster.loc[recluster.VARIABLE == "COMPETITOR_STATE_ID", "IS_MANUPULATED"] = 0: "COMPET
+
+Kaynaklar ve ilgili içerik
+v7
+
+PY
+
+
+
+
+devam et lutfen
+
+
+Tabii, devam ediyorum:
+
+Python
+
+def manipulate_clusters(branch_data, var_3, num_of_cluster, ratios, alt_limit=0.1, ust_limit=0.25):
+    """Manipulate clusters based on limits"""
+    recluster = pd.DataFrame({
+        "VARIABLE": var_3,
+        "RATIOS": ratios,
+        "IS_MANUPULATED": np.zeros(len(ratios)),
+        "CLUSTER_NO": np.zeros(len(ratios)),
+        "SEMI_CLUSTER": np.zeros(len(ratios))
+    })
+    
+    for x in var_3:
+        mem_rat=0
+        for i in range(num_of_cluster[x]):
+            if i==0:
+                if branch_data[branch_data[x+'_SKOR']==i].KOD.count()/branch_data.KOD.count()>=alt_limit:
+                    break
+                elif branch_data[branch_data[x+'_SKOR']==i].KOD.count()/branch_data.KOD.count()<alt_limit:
+                    mem_rat=mem_rat+branch_data[branch_data[x+'_SKOR']==i].KOD.count()/branch_data.KOD.count()
+    
+            else:
+                if mem_rat<alt_limit:
+                    mem_rat=mem_rat+branch_data[branch_data[x+'_SKOR']==i].KOD.count()/branch_data.KOD.count()
+                    if mem_rat>=ust_limit:
+                        recluster.loc[recluster.VARIABLE==x,"IS_MANUPULATED"]=1
+                        if i==num_of_cluster[x]-1:
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i-1
+                        elif i<=num_of_cluster[x]-2 and x=='OTHER_WORK_CAP_AMOUNT_TL':
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i+1
+                        else:
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i
+    
+                        if x=='OTHER_WORK_CAP_AMOUNT_TL':
+                            recluster.loc[recluster.VARIABLE==x,"SEMI_CLUSTER"]=0
+                        else:
+                            recluster.loc[recluster.VARIABLE==x,"SEMI_CLUSTER"]=1
+                        break
+                    elif mem_rat>=alt_limit:
+                        recluster.loc[recluster.VARIABLE==x,"IS_MANUPULATED"]=1
+                        if i==num_of_cluster[x]-1:
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i-1
+                        elif i<=num_of_cluster[x]-2 and x=='OTHER_WORK_CAP_AMOUNT_TL':
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i+1
+                        else:
+                            recluster.loc[recluster.VARIABLE==x,"CLUSTER_NO"]=i
+                        break
+    # Fix the typo: NOF_RANCH_IN_MICRO_MARKET -> NOF_BRANCH_IN_MICRO_MARKET
+    recluster.loc[recluster.VARIABLE=="NOF_BRANCH_IN_MICRO_MARKET","IS_MANUPULATED"]=0 
+    recluster.loc[recluster.VARIABLE=="COMPETITOR_STATE_ID","IS_MANUPULATED"]=0      
+    
+    return recluster
+recluster.loc[recluster.VARIABLE == "COMPETITOR_STATE_ID", "IS_MANUPULATED"] = 0: "COMPETITOR_STATE_ID" değişkeninin manipülasyon durumunu 0 olarak ayarlar.
+return recluster: Manipülasyon bilgilerini içeren recluster DataFrame'ini döndürür.
+Python
+
+def apply_manipulation(branch_data, recluster, var_3):
+    """Apply the manipulation to the data"""
+    data2 = branch_data.copy()
+    for x in var_3:
+        y = x + "_SKOR"
+        recluster_x = recluster[recluster.VARIABLE == x]
+        
+        if recluster_x.IS_MANUPULATED.values == 1:
+            cluster_no = int(recluster_x.CLUSTER_NO)
+            is_ratio = recluster_x.RATIOS.values
+            semi_cluster = recluster_x.SEMI_CLUSTER.values == 1
+            
+            if semi_cluster:
+                mean_value = data2[data2[y] == cluster_no][x].mean()
+                data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= mean_value else (data2[x].min() / 100 if is_ratio else j))
+            else:
+                if is_ratio:
+                    max_value = data2[data2[y] <= cluster_no][x].max()
+                    data2[x] = data2[x].apply(lambda j: data2[x].min() / 100 if j <= max_value else j)
+                else:
+                    min_value = data2[data2[y] <= cluster_no][x].min()
+                    data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= min_value else j)
+    
+    return data2
+def apply_manipulation(branch_data, recluster, var_3):: Bu satır, apply_manipulation adında bir fonksiyon tanımlar. Bu fonksiyonun görevi, manipülasyonları verilere uygulamaktır.
+"""Apply the manipulation to the data""": Bu, fonksiyonun ne yaptığını açıklayan bir docstring'dir.
+data2 = branch_data.copy(): Orijinal branch_data DataFrame'inin bir kopyasını oluşturur.
+for x in var_3:: var_3'teki her bir değişken için bir döngü başlatır.
+y = x + "_SKOR": İlgili değişkenin skor sütununun adını oluşturur.
+recluster_x = recluster[recluster.VARIABLE == x]: recluster DataFrame'inden ilgili değişkene ait manipülasyon bilgilerini alır.
+if recluster_x.IS_MANUPULATED.values == 1:: Eğer ilgili değişken manipüle edildiyse:
+cluster_no = int(recluster_x.CLUSTER_NO): Manipülasyon sonrası küme numarasını alır.
+is_ratio = recluster_x.RATIOS.values: İlgili değişkenin sıralama oranını alır.
+semi_cluster = recluster_x.SEMI_CLUSTER.values == 1: Yarı kümeleme durumunu alır.
+if semi_cluster:: Eğer yarı kümeleme durumu aktifse:
+mean_value = data2[data2[y] == cluster_no][x].mean(): İlgili kümedeki değişkenin ortalama değerini hesaplar.
+data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= mean_value else (data2[x].min() / 100 if is_ratio else j)): Değişkenin değerlerini, ortalama değerine göre manipüle eder. Eğer değer ortalamadan büyükse, maksimum değerin 100 katı ile değiştirilir. Aksi takdirde, eğer is_ratio True ise minimum değerin 1/100'ü ile değiştirilir, değilse değer olduğu gibi bırakılır.
+else:: Eğer yarı kümeleme durumu aktif değilse:
+if is_ratio:: Eğer is_ratio True ise:
+max_value = data2[data2[y] <= cluster_no][x].max(): İlgili küme numarasına eşit veya küçük skorlara sahip şubelerdeki değişkenin maksimum değerini alır.
+data2[x] = data2[x].apply(lambda j: data2[x].min() / 100 if j <= max_value else j): Değişkenin değerlerini, maksimum değerine göre manipüle eder. Eğer değer maksimumdan küçük veya eşitse, minimum değerin 1/100'ü ile değiştirilir, değilse değer olduğu gibi bırakılır.
+else:: Eğer is_ratio False ise:
+min_value = data2[data2[y] <= cluster_no][x].min(): İlgili küme numarasına eşit veya küçük skorlara sahip şubelerdeki değişkenin minimum değerini alır.
+data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= min_value else j): Değişkenin değerlerini, minimum değerine göre manipüle eder. Eğer değer minimumdan büyük veya eşitse, maksimum değerin 100 katı ile değiştirilir, değilse değer olduğu gibi bırakılır.
+return data2: Manipüle edilmiş veriyi içeren data2 DataFrame'ini döndürür.
+Python
+
+def manipulate_clusters_second_phase(branch_data, var_3, num_of_cluster, ratios, b_alt_limit=0.05, b_ust_limit=0.1):
+    """Second manipulation phase for clusters"""
+    b_recluster = pd.DataFrame({
+        "VARIABLE": var_3,
+        "RATIOS": ratios,
+        "IS_MANUPULATED": np.zeros(len(ratios)),
+        "CLUSTER_NO": np.zeros(len(ratios)),
+        "SEMI_CLUSTER": np.zeros(len(ratios))
+    })
+    
+    for x in var_3:
+        if x == 'BIR_KM_YKB':
+            continue
+            
+        mem_rat = 0
+        for i in range(num_of_cluster[x] - 1, -1, -1):
+            current_ratio = branch_data[branch_data[x + '_SKOR'] == i].KOD.count() / branch_data.KOD.count()
+            
+            if i == num_of_cluster[x] - 1:
+                if current_ratio >= b_alt_limit:
+                    break
+                else:
+                    mem_rat += current_ratio
+            else:
+                if mem_rat < b_alt_limit:
+                    mem_rat += current_ratio
+                if mem_rat >= b_ust_limit:
+                    b_recluster.loc[b_recluster.VARIABLE == x, ["IS_MANUPULATED", "CLUSTER_NO", "SEMI_CLUSTER"]] = [1, i if i != 0 else i + 1, 1]
+                    break
+                elif mem_rat >= b_alt_limit:
+                    b_recluster.loc[b_recluster.VARIABLE == x, ["IS_MANUPULATED", "CLUSTER_NO"]] = [1, i if i != 0 else i + 1]
+                    break
+    
+    b_recluster.loc[b_recluster.VARIABLE.isin(["NOF_BRANCH_IN_MICRO_MARKET", "COMPETITOR_STATE_ID"]), "IS_MANUPULATED"] = 0
+    
+    return b_recluster
+def manipulate_clusters_second_phase(branch_data, var_3, num_of_cluster, ratios, b_alt_limit=0.05, b_ust_limit=0.1):: Bu satır, manipulate_clusters_second_phase adında bir fonksiyon tanımlar. Bu fonksiyonun görevi, kümeler için ikinci bir manipülasyon aşaması uygulamaktır.
+"""Second manipulation phase for clusters""": Bu, fonksiyonun ne yaptığını açıklayan bir docstring'dir.
+b_recluster = pd.DataFrame({ ... }): İkinci aşama manipülasyon bilgilerini saklamak için bir Pandas DataFrame'i oluşturur. Bu DataFrame, manipulate_clusters fonksiyonundaki recluster DataFrame'ine benzer sütunlara sahiptir.
+for x in var_3:: var_3'teki her bir değişken için bir döngü başlatır.
+if x == 'BIR_KM_YKB':: Eğer değişken 'BIR_KM_YKB' ise:
+continue: Döngünün bir sonraki iterasyonuna geçer. Bu değişken için manipülasyon uygulanmaz.
+mem_rat = 0: Bir değişkene ait kümelerin belirli bir orana ulaşıp ulaşmadığını kontrol etmek için bir değişken tanımlar ve başlangıç değerini 0 olarak ayarlar.
+for i in range(num_of_cluster[x] - 1, -1, -1):: İlgili değişken için optimal küme sayısının bir eksiğinden 0'a kadar (0 dahil) geriye doğru bir döngü başlatır.
+current_ratio = branch_data[branch_data[x + '_SKOR'] == i].KOD.count() / branch_data.KOD.count(): İlgili kümeye ait şubelerin oranını hesaplar.
+if i == num_of_cluster[x] - 1:: Eğer küme numarası, optimal küme sayısının bir eksiğine eşitse:
+if current_ratio >= b_alt_limit:: Eğer ilgili kümeye ait şubelerin oranı b_alt_limit'e eşit veya büyükse:
+break: Döngüden çıkar.
+else:: Eğer ilgili kümeye ait şubelerin oranı b_alt_limit'ten küçükse:
+mem_rat += current_ratio: İlgili kümeye ait şubelerin oranını mem_rat'e ekler.
+else:: Eğer küme numarası, optimal küme sayısının bir eksiğine eşit değilse:
+if mem_rat < b_alt_limit:: Eğer mem_rat değeri b_alt_limit'ten küçükse:
+mem_rat += current_ratio: İlgili kümeye ait şubelerin oranını mem_rat'e ekler.
+if mem_rat >= b_ust_limit:: Eğer mem_rat değeri b_ust_limit'e eşit veya büyükse:
+b_recluster.loc[b_recluster.VARIABLE == x, ["IS_MANUPULATED", "CLUSTER_NO", "SEMI_CLUSTER"]] = [1, i if i != 0 else i + 1, 1]: İlgili değişkenin manipüle edildiğini, manipülasyon sonrası küme numarasını ve yarı kümeleme durumunu ayarlar.
+break: Döngüden çıkar.
+elif mem_rat >= b_alt_limit:: Eğer mem_rat değeri b_alt_limit'e eşit veya büyükse:
+b_recluster.loc[b_recluster.VARIABLE == x, ["IS_MANUPULATED", "CLUSTER_NO"]] = [1, i if i != 0 else i + 1]: İlgili değişkenin manipüle edildiğini ve manipülasyon sonrası küme numarasını ayarlar.
+break: Döngüden çıkar.
+b_recluster.loc[b_recluster.VARIABLE.isin(["NOF_BRANCH_IN_MICRO_MARKET", "COMPETITOR_STATE_ID"]), "IS_MANUPULATED"] = 0: "NOF_BRANCH_IN_MICRO_MARKET" ve "COMPETITOR_STATE_ID" değişkenlerinin manipülasyon durumlarını 0 olarak ayarlar.
+return b_recluster: İkinci aşama manipülasyon bilgilerini içeren b_recluster DataFrame'ini döndürür.
+Python
+
+def apply_both_manipulations(branch_data, recluster, b_recluster, var_3):
+    """Apply both manipulation phases to the data"""
+    data2 = branch_data.copy()
+    for x in var_3:
+        y = x + "_SKOR"
+        recluster_x = recluster[recluster.VARIABLE == x]
+        b_recluster_x = b_recluster[b_recluster.VARIABLE == x]
+        
+        # First manipulation (repeated)
+        if recluster_x.IS_MANUPULATED.values == 1:
+            if not recluster_x.RATIOS.values:
+                min_value = data2[data2[y] == 0][x].min()
+                data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= min_value else j)
+            else:
+                max_value = data2[data2[y] == 0][x].max()
+                data2[x] = data2[x].apply(lambda j: data2[x].min() / 100 if j <= max_value else j)
+        
+        # Second manipulation
+        if b_recluster_x.IS_MANUPULATED.values == 1:
+            cluster_no =
+
+Kaynaklar ve ilgili içerik
+v7
+
+PY
+
+
+
+
+devam et
+
+
+Tabii, devam ediyorum:
+
+Python
+
+def apply_both_manipulations(branch_data, recluster, b_recluster, var_3):
+    """Apply both manipulation phases to the data"""
+    data2 = branch_data.copy()
+    for x in var_3:
+        y = x + "_SKOR"
+        recluster_x = recluster[recluster.VARIABLE == x]
+        b_recluster_x = b_recluster[b_recluster.VARIABLE == x]
+        
+        # First manipulation (repeated)
+        if recluster_x.IS_MANUPULATED.values == 1:
+            if not recluster_x.RATIOS.values:
+                min_value = data2[data2[y] == 0][x].min()
+                data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= min_value else j)
+            else:
+                max_value = data2[data2[y] == 0][x].max()
+                data2[x] = data2[x].apply(lambda j: data2[x].min() / 100 if j <= max_value else j)
+        
+        # Second manipulation
+        if b_recluster_x.IS_MANUPULATED.values == 1:
+            cluster_no = int(b_recluster_x.CLUSTER_NO)
+            is_ratio = b_recluster_x.RATIOS.values
+            semi_cluster = b_recluster_x.SEMI_CLUSTER.values == 1
+            
+            if semi_cluster:
+                mean_value = data2[data2[y] == cluster_no][x].mean()
+                if not is_ratio:
+                    data2[x] = data2[x].apply(lambda j: data2[x].min() / 100 if j <= mean_value else j)
+                else:
+                    data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= mean_value else j)
+            else:
+                if not is_ratio:
+                    max_value = data2[data2[y] >= cluster_no][x].max()
+                    data2[x] = data2[x].apply(lambda j: data2[x].min() / 100 if j <= max_value else j)
+                else:
+                    min_value = data2[data2[y] >= cluster_no][x].min()
+                    data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= min_value else j)
+    
+    return data2
+def apply_both_manipulations(branch_data, recluster, b_recluster, var_3):: Bu satır, apply_both_manipulations adında bir fonksiyon tanımlar. Bu fonksiyonun görevi, her iki manipülasyon aşamasını da verilere uygulamaktır.
+"""Apply both manipulation phases to the data""": Bu, fonksiyonun ne yaptığını açıklayan bir docstring'dir.
+data2 = branch_data.copy(): Orijinal branch_data DataFrame'inin bir kopyasını oluşturur.
+for x in var_3:: var_3'teki her bir değişken için bir döngü başlatır.
+y = x + "_SKOR": İlgili değişkenin skor sütununun adını oluşturur.
+recluster_x = recluster[recluster.VARIABLE == x]: recluster DataFrame'inden ilgili değişkene ait ilk aşama manipülasyon bilgilerini alır.
+b_recluster_x = b_recluster[b_recluster.VARIABLE == x]: b_recluster DataFrame'inden ilgili değişkene ait ikinci aşama manipülasyon bilgilerini alır.
+# First manipulation (repeated): Bu, ilk aşama manipülasyonunun tekrar uygulandığını belirten bir yorum satırıdır.
+if recluster_x.IS_MANUPULATED.values == 1:: Eğer ilgili değişken ilk aşamada manipüle edildiyse:
+if not recluster_x.RATIOS.values:: Eğer recluster_x.RATIOS.values boşsa (yani, RATIOS sütunu bir değer içermiyorsa):
+min_value = data2[data2[y] == 0][x].min(): İlgili değişkende, skoru 0 olan şubelerin minimum değerini alır.
+data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= min_value else j): Değişkenin değerlerini, minimum değerine göre manipüle eder. Eğer değer minimumdan büyük veya eşitse, maksimum değerin 100 katı ile değiştirilir, değilse değer olduğu gibi bırakılır.
+else:: Eğer recluster_x.RATIOS.values boş değilse:
+max_value = data2[data2[y] == 0][x].max(): İlgili değişkende, skoru 0 olan şubelerin maksimum değerini alır.
+data2[x] = data2[x].apply(lambda j: data2[x].min() / 100 if j <= max_value else j): Değişkenin değerlerini, maksimum değerine göre manipüle eder. Eğer değer maksimumdan küçük veya eşitse, minimum değerin 1/100'ü ile değiştirilir, değilse değer olduğu gibi bırakılır.
+# Second manipulation: Bu, ikinci aşama manipülasyonunun uygulandığını belirten bir yorum satırıdır.
+if b_recluster_x.IS_MANUPULATED.values == 1:: Eğer ilgili değişken ikinci aşamada manipüle edildiyse:
+cluster_no = int(b_recluster_x.CLUSTER_NO): İkinci aşama manipülasyon sonrası küme numarasını alır.
+is_ratio = b_recluster_x.RATIOS.values: İlgili değişkenin sıralama oranını alır.
+semi_cluster = b_recluster_x.SEMI_CLUSTER.values == 1: İkinci aşama yarı kümeleme durumunu alır.
+if semi_cluster:: Eğer ikinci aşama yarı kümeleme durumu aktifse:
+mean_value = data2[data2[y] == cluster_no][x].mean(): İlgili kümedeki değişkenin ortalama değerini hesaplar.
+if not is_ratio:: Eğer is_ratio False ise:
+data2[x] = data2[x].apply(lambda j: data2[x].min() / 100 if j <= mean_value else j): Değişkenin değerlerini, ortalama değerine göre manipüle eder. Eğer değer ortalamadan küçük veya eşitse, minimum değerin 1/100'ü ile değiştirilir, değilse değer olduğu gibi bırakılır.
+else:: Eğer is_ratio True ise:
+data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= mean_value else j): Değişkenin değerlerini, ortalama değerine göre manipüle eder. Eğer değer ortalamadan büyük veya eşitse, maksimum değerin 100 katı ile değiştirilir, değilse değer olduğu gibi bırakılır.
+else:: Eğer ikinci aşama yarı kümeleme durumu aktif değilse:
+if not is_ratio:: Eğer is_ratio False ise:
+max_value = data2[data2[y] >= cluster_no][x].max(): İlgili küme numarasına eşit veya büyük skorlara sahip şubelerdeki değişkenin maksimum değerini alır.
+data2[x] = data2[x].apply(lambda j: data2[x].min() / 100 if j <= max_value else j): Değişkenin değerlerini, maksimum değerine göre manipüle eder. Eğer değer maksimumdan küçük veya eşitse, minimum değerin 1/100'ü ile değiştirilir, değilse değer olduğu gibi bırakılır.
+else:: Eğer is_ratio True ise:
+min_value = data2[data2[y] >= cluster_no][x].min(): İlgili küme numarasına eşit veya büyük skorlara sahip şubelerdeki değişkenin minimum değerini alır.
+data2[x] = data2[x].apply(lambda j: data2[x].max() * 100 if j >= min_value else j): Değişkenin değerlerini, minimum değerine göre manipüle eder. Eğer değer minimumdan büyük veya eşitse, maksimum değerin 100 katı ile değiştirilir, değilse değer olduğu gibi bırakılır.
+return data2: Her iki aşama manipülasyonu uygulanmış veriyi içeren data2 DataFrame'ini döndürür.
+Python
+
+def final_scoring(branch_data, var_3, var_skor, coefficients):
+    """Calculate final model score"""
+    mmscaler = MinMaxScaler()
+    olck_degler =
+    for x in var_skor:
+        branch_data = pd.concat([branch_data, pd.DataFrame(mmscaler.fit_transform(branch_data[[x]]), columns=[x + '_OLCK'])], axis=1)
+        olck_degler.append(x + '_OLCK')
+    
+    branch_data['MODEL_SCORE'] = (branch_data[olck_degler] * coefficients).sum(axis=1)
+    
+    return branch_data, olck_degler
+def final_scoring(branch_data, var_3, var_skor, coefficients):: Bu satır, final_scoring adında bir fonksiyon tanımlar. Bu fonksiyonun görevi, nihai model skorunu hesaplamaktır.
+"""Calculate final model score""": Bu, fonksiyonun ne yaptığını açıklayan bir docstring'dir.
+mmscaler = MinMaxScaler(): Bir MinMaxScaler nesnesi oluşturur. MinMaxScaler, veriyi 0 ile 1 arasına ölçeklendirmek için kullanılır.
+olck_degler =: Ölçeklendirilmiş değişkenlerin isimlerini saklamak için boş bir liste oluşturur.
+for x in var_skor:: var_skor'daki her bir değişken için bir döngü başlatır.
+branch_data = pd.concat([branch_data, pd.DataFrame(mmscaler.fit_transform(branch_data[[x]]), columns=[x + '_OLCK'])], axis=1): İlgili değişkeni MinMaxScaler ile 0 ile 1 arasına ölçeklendirir ve orijinal branch_data DataFrame'ine yeni bir sütun olarak ekler. pd.concat fonksiyonu, DataFrame'leri birleştirmek için kullanılır. axis=1 parametresi, sütun bazında birleştirme yapılacağını belirtir.
+olck_degler.append(x + '_OLCK'): Ölçeklendirilmiş değişkenin adını olck_degler listesine ekler.
+branch_data['MODEL_SCORE'] = (branch_data[olck_degler] * coefficients).sum(axis=1): Nihai model skorunu hesaplar. branch_data[olck_degler] ile ölçeklendirilmiş değişkenlerin değerlerini alır, bu değerleri coefficients listesindeki ağırlıklarla çarpar ve sonuçları satır bazında toplar.
+return branch_data, olck_degler: Güncellenmiş branch_data DataFrame'ini ve ölçeklendirilmiş değişkenlerin isimlerini içeren olck_degler listesini döndürür.
+Python
+
+def main():
+    df = get_data_from_db()
+    branch_data, var_3, scale_val = prepare_data(df)
+    
+    ratios = [
+        False, False, True, False, True, False, False, False, True, False,
+        False, False, False, False, False, False, False, False, True,
+        False, True
+    ]
+    
+    num_of_cluster = find_optimal_clusters(scale_val, branch_data)
+    branch_data = cluster_and_score(branch_data, var_3, scale_val, num_of_cluster, ratios)
+    
+    var_skor = [var + '_SKOR' for var in var_3]
+    
+    # First manipulation phase
+    recluster = manipulate_clusters(branch_data, var_3, num_of_cluster, ratios)
+    data2 = apply_manipulation(branch_data, recluster, var_3)
+    
+    # Prepare for reclustering
+    branch_data_2 = data2.copy()
+    for x in var_skor:
+        branch_data_2 = branch_data_2.drop(x, axis=1)
+        branch_data = branch_data.drop(x, axis=1)
+    
+    # Reapply scaling and clustering
+    scale_val_2 = StandardScaler().fit_transform(branch_data_2[var_3])
+    branch_data = cluster_and_score(branch_data, var_3, scale_val_2, num_of_cluster, ratios)
+    
+    # Second manipulation phase - ADDED THIS SECTION
+    b_recluster = manipulate_clusters_second_phase(branch_data, var_3, num_of_cluster, ratios)
+    data2 = apply_both_manipulations(branch_data, recluster, b_recluster, var_3)
+    
+    # Final clustering preparation  
+    branch_data_2 = data2.copy()
+    for x in var_skor:
+        branch_data_2 = branch_data_2.drop(x, axis=1)
+        branch_data = branch_data.drop(x, axis=1)
+    
+    # Final clustering and scoring
+    scale_val_2 = StandardScaler().fit_transform(branch_data_2[var_3])
+    branch_data = cluster_and_score(branch_data, var_3, scale_val_2, num_of_cluster, ratios)
+    
+    # Calculate final scores with weights
+    coefficients = [12, 12, 10, 6, 4, 3, 3, 3, 3, 4, 3, 3, 3, 3, 3, 4, 3, 4, 3, 4, 4, 3]
+    branch_data, olck_degler = final_scoring(branch_data, var_3, var_skor, coefficients)
+    
+    # Prepare final result dataframe
+    branch_data_2 = branch_data.copy()
+    skor_column = [r + '_SCORE' for r in var_3]
+    
+    for i in range(len(coefficients)):
+        branch_data_2[skor_column[i]] = branch_data_2[olck_degler[i]] * coefficients[i]
+    
+    branch_data_2 = branch_data_2.drop(var_skor + olck_degler, axis=1)
+    
+    column_mapping = {
+        'KOD': 'BRANCH_ID',
+        'WORKING_CAPACITY_AMOUNT_TL_SCORE': 'WORK_CAP_AMOUNT_TL_SCORE',
+        'NPL_CREDIT_CASH_LOAN_RATIO_SCORE': 'NPL_CR_CSH_LOAN_RATIO_SCORE',
+        'NOF_FINANCIAL_TRANSACTION_L12M_SCORE': 'NOF_FINANCIAL_TRX_SCORE_L12M',
+        'NEW_ACTIVE_CUSTOMER_RATIO_L12M_SCORE': 'NEW_ACTV_CUST_RATIO_SCORE_L12M',
+        'ACTIVE_PRODUCT_CUSTOMER_RATIO_SCORE': 'ACTIVE_PRD_CUST_RATIO_SCORE',
+        'CREDIT_MARKET_SHARE_EXCL_BRCH_SCORE': 'CR_MKT_SHARE_EXCL_BRCH_SCORE',
+        'DEPOSIT_MARKET_SHARE_EXCL_BRCH_SCORE': 'DEPO_MKT_SHARE_EXCL_BRCH_SCORE',
+        'DISTRICT_ADULT_BRANCH_RATIO_SCORE': 'DISTRICT_ADLT_BRCH_RATIO_SCORE',
+        'NOF_COMPETITOR_BRANCH_NEARBY_SCORE': 'NOF_COMPT_BRCH_NEARBY_SCORE',
+        'WORK_CAP_AMOUNT_TL_RATIO_L12M_SCORE': 'WORK_CAP_AMT_RATIO_SCORE_L12M',
+        'ACTIVE_CUSTOMER_RATIO_L12M_SCORE': 'ACTIVE_CUST_RATIO_SCORE_L12M',
+        'BUDGET_WORK_CAP_AMT_TL_RATIO_SCORE': 'BDG_WORK_CAP_AMT_RATIO_SCORE',
+        'CUSTOMER_PRODUCTIVITY_RATIO_SCORE
+
+Kaynaklar ve ilgili içerik
+v7
+
+PY
+
+
+
+
+
+devam et
+
+
+Python
+
+        'NOF_BRANCH_IN_MICRO_MARKET_SCORE': 'NOF_BRANCH_IN_MICRO_MKT_SCORE',
+        'MICRO_MARKET_POTENTIAL_RATIO_SCORE': 'MICRO_MARKET_POT_RATIO_SCORE'
+    }
+    branch_data_2 = branch_data_2.rename(columns=column_mapping)
+    
+    result_df = branch_data_2.drop(columns=['NET_PROFIT_AMOUNT_TL','COST_INCOME_RATIO','NOF_ACTIVE_CUSTOMER','OTHER_WORK_CAP_AMOUNT_TL','CAPACITY_USAGE_RATIO','DIGITAL_CUSTOMER_RATIO','COMPETITOR_STATE_ID','WORKING_CAPACITY_AMOUNT_TL','NPL_CREDIT_CASH_LOAN_RATIO','NOF_FINANCIAL_TRANSACTION_L12M','NEW_ACTIVE_CUSTOMER_RATIO_L12M','ACTIVE_PRODUCT_CUSTOMER_RATIO','CREDIT_MARKET_SHARE_EXCL_BRCH','DEPOSIT_MARKET_SHARE_EXCL_BRCH','DISTRICT_ADULT_BRANCH_RATIO','NOF_COMPETITOR_BRANCH_NEARBY','WORK_CAP_AMOUNT_TL_RATIO_L12M','ACTIVE_CUSTOMER_RATIO_L12M','BUDGET_WORK_CAP_AMT_TL_RATIO','CUSTOMER_PRODUCTIVITY_RATIO','NOF_BRANCH_IN_MICRO_MARKET','MICRO_MARKET_POTENTIAL_RATIO'])
+    
+    return result_df
+column_mapping = { ... }: Sonuç DataFrame'indeki sütun isimlerini değiştirmek için bir sözlük tanımlar. Bu sözlük, eski sütun isimlerini yeni sütun isimleriyle eşleştirir.
+branch_data_2 = branch_data_2.rename(columns=column_mapping): column_mapping sözlüğünü kullanarak branch_data_2 DataFrame'indeki sütun isimlerini değiştirir.
+result_df = branch_data_2.drop(columns=[...]): branch_data_2 DataFrame'inden belirli sütunları kaldırır. Bu sütunlar, nihai sonuçta yer alması istenmeyen sütunlardır.
+return result_df: İşlenmiş ve son haline getirilmiş result_df DataFrame'ini döndürür.
+Python
+
+if __name__ == "__main__":
+    result_df = main()
+if __name__ == "__main__":: Bu blok, kodun doğrudan çalıştırılıp çalıştırılmadığını kontrol eder. Eğer kod doğrudan çalıştırılıyorsa (yani, başka bir Python dosyası tarafından içe aktarılmıyorsa), bu blok içindeki kod yürütülür.
+result_df = main(): main fonksiyonunu çağırır ve döndürdüğü DataFrame'i result_df değişkenine atar.
+Özet
+
+Bu kod, banka şubelerinin performansını değerlendirmek ve sıralamak için karmaşık bir modelleme süreci uygulamaktadır. Süreç, veritabanından veri çekme, ön işleme, kümeleme, manipülasyon ve skorlama adımlarını içerir. Kod, Pandas, NumPy, scikit-learn ve cx_Oracle gibi çeşitli Python kütüphanelerini kullanır. Her bir fonksiyon, belirli bir görevi yerine getirir ve kodun modüler ve düzenli olmasını sağlar.
+
+
+Kaynaklar ve ilgili içerik
+v7
+
+PY
+
+
+
+
+
+
+
+
+
+
+Gemini hata yapabildiğinden verdiği yanıtları doğrulayın
